@@ -48,6 +48,27 @@
   .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
   .warn { color: #ffcf6b; }
   .time { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  select, input[type=time], input[type=number] { background: #10131a; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; font: inherit; width: 100%; }
+  .routines { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .routine { position: relative; text-align: left; padding: 14px 12px; }
+  .routine b { display: block; font-size: 15px; }
+  .routine small { color: var(--muted); font-size: 12px; }
+  .routine .x { position: absolute; top: 4px; right: 6px; color: var(--muted); font-size: 12px; padding: 2px 4px; }
+  .days { display: flex; gap: 4px; flex-wrap: wrap; }
+  .days label { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 34px; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; font-size: 13px; user-select: none; }
+  .days input { display: none; }
+  .days input:checked + span { color: #fff; }
+  .days label:has(input:checked) { background: var(--accent); border-color: var(--accent); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .chips button { padding: 6px 10px; font-size: 13px; border-radius: 999px; }
+  details { margin-top: 12px; }
+  details summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+  .form { display: grid; gap: 4px; margin-top: 8px; }
+  .check { display: flex; align-items: center; gap: 8px; font-size: 14px; margin-top: 8px; }
+  .banner { background: #3a2a10; border: 1px solid #ffcf6b; color: #ffcf6b; border-radius: 12px; padding: 12px 14px; display: none; }
+  .banner.show { display: block; }
+  .big { font-size: 28px; font-variant-numeric: tabular-nums; font-weight: 700; }
+  .switch { display: flex; justify-content: space-between; align-items: center; }
   @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -58,6 +79,7 @@
 </header>
 
 <main>
+  <div class="banner" id="banner"></div>
   <section class="card">
     <h2>Parlante</h2>
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">Cargando Google Cast…</span></div>
@@ -78,9 +100,89 @@
       <button id="btnNext" disabled>⏭</button>
       <button id="btnStop" disabled>⏹</button>
       <button id="btnMute" disabled>🔇</button>
+      <button id="btnFav" title="Guardar lo que suena en favoritos">★ Guardar</button>
     </div>
     <div class="label">Volumen</div>
     <input type="range" id="vol" min="0" max="100" value="50" disabled>
+  </section>
+
+  <section class="card">
+    <h2>Rutinas</h2>
+    <div class="routines" id="routineGrid"></div>
+    <details>
+      <summary>+ Crear rutina</summary>
+      <div class="form">
+        <div class="label">Nombre</div>
+        <input type="text" id="rName" placeholder="🎸 Ensayo">
+        <div class="label">Qué reproducir</div>
+        <select id="rSource" class="srcSelect"></select>
+        <label class="check"><input type="checkbox" id="rVolOn"> Ajustar volumen a <b id="rVolTxt">40</b>%</label>
+        <input type="range" id="rVol" min="5" max="100" value="40">
+        <div class="label">Anuncio de voz (opcional, puedes usar {hora} y {fecha})</div>
+        <input type="text" id="rSay" placeholder="Hora de ensayar. Son las {hora}.">
+        <div class="label">Apagar después de (minutos, opcional)</div>
+        <input type="number" id="rSleep" min="0" max="600" placeholder="0 = no apagar">
+        <div class="controls"><button class="primary" id="rSave">Guardar rutina</button></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>Anuncios por voz</h2>
+    <div class="row">
+      <input type="text" id="sayText" maxlength="200" placeholder="Escribe lo que quieres que diga el parlante">
+      <button class="primary" id="btnSay">📢 Decir</button>
+    </div>
+    <div class="chips" id="sayChips">
+      <button data-say="La comida está lista.">🍽️ Comida lista</button>
+      <button data-say="Son las {hora}.">🕒 Decir la hora</button>
+      <button data-say="Hoy es {fecha}.">📅 Decir la fecha</button>
+      <button data-say="Es hora de salir.">🚪 Hora de salir</button>
+      <button data-say="Por favor, bajen a la sala.">📣 A la sala</button>
+    </div>
+    <label class="check"><input type="checkbox" id="sayResume" checked> Retomar la música después del anuncio</label>
+    <p class="hint">La voz se genera con el servicio de voz de Google Translate (no es oficial, así que podría dejar de funcionar). El texto se envía a Google para convertirlo en audio.</p>
+  </section>
+
+  <section class="card">
+    <h2>Temporizador de apagado</h2>
+    <div class="switch"><div class="big" id="sleepLeft">--:--</div><button id="sleepCancel" disabled>Cancelar</button></div>
+    <div class="chips">
+      <button data-sleep="15">15 min</button><button data-sleep="30">30 min</button>
+      <button data-sleep="45">45 min</button><button data-sleep="60">1 hora</button><button data-sleep="90">1 h 30</button>
+    </div>
+    <p class="hint">El volumen baja suavemente durante los últimos 30 segundos y luego la música se detiene.</p>
+  </section>
+
+  <section class="card">
+    <h2>Alarmas</h2>
+    <ul class="list" id="alarmList"></ul>
+    <details>
+      <summary>+ Nueva alarma</summary>
+      <div class="form">
+        <div class="grid2">
+          <div><div class="label">Hora</div><input type="time" id="aTime" value="06:30"></div>
+          <div><div class="label">Qué reproducir</div><select id="aSource" class="srcSelect"></select></div>
+        </div>
+        <div class="label">Días (si no marcas ninguno, suena una sola vez)</div>
+        <div class="days" id="aDays"></div>
+        <div class="label">Volumen final: <b id="aVolTxt">40</b>%</div>
+        <input type="range" id="aVol" min="5" max="100" value="40">
+        <label class="check"><input type="checkbox" id="aRamp" checked> Subir el volumen poco a poco (2 minutos)</label>
+        <label class="check"><input type="checkbox" id="aSay" checked> Saludar con la hora y la fecha</label>
+        <div class="controls"><button class="primary" id="aSave">Guardar alarma</button></div>
+      </div>
+    </details>
+    <div class="switch" style="margin-top:14px">
+      <div><b>Modo mesita de noche</b><br><small class="hint">Mantiene la pantalla encendida para que las alarmas suenen a tiempo.</small></div>
+      <button id="btnWake">Activar</button>
+    </div>
+    <p class="hint warn">Las alarmas y el temporizador funcionan mientras esta app está abierta en el celular o el PC. Deja el celular cargando con el modo mesita activado.</p>
+  </section>
+
+  <section class="card">
+    <h2>Favoritos</h2>
+    <ul class="list" id="favList"></ul>
   </section>
 
   <section class="card">
@@ -146,7 +248,7 @@ function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;
 // ---------- Cast ----------
 function loadTrack(track) {
   const s = session();
-  if (!s) { alert('Primero conéctate al parlante con el ícono de Cast.'); return; }
+  if (!s) { alert('Primero conéctate al parlante con el ícono de Cast.'); return Promise.reject(new Error('sin sesión')); }
   const info = new chrome.cast.media.MediaInfo(track.url, track.type || guessType(track.url));
   info.streamType = track.live ? chrome.cast.media.StreamType.LIVE : chrome.cast.media.StreamType.BUFFERED;
   const md = new chrome.cast.media.MusicTrackMediaMetadata();
@@ -156,8 +258,8 @@ function loadTrack(track) {
   info.metadata = md;
   const req = new chrome.cast.media.LoadRequest(info);
   req.autoplay = true;
-  s.loadMedia(req).then(
-    () => renderNow(track),
+  return s.loadMedia(req).then(
+    () => { if (!track.announce) state.current = track; renderNow(track); },
     (err) => { console.error(err); alert('El parlante no pudo reproducir este audio. Prueba con otro enlace (debe ser público y en un formato compatible).'); }
   );
 }
@@ -197,7 +299,10 @@ function initCast() {
   c.addEventListener(E.PLAYER_STATE_CHANGED, () => {
     // Auto-advance when a track finishes
     const ms = session()?.getMediaSession();
-    if (p.playerState === 'IDLE' && ms && ms.idleReason === 'FINISHED') next();
+    if (p.playerState === 'IDLE' && ms && ms.idleReason === 'FINISHED') {
+      if (window.hmpOnFinished && window.hmpOnFinished()) return; // announcement ended
+      next();
+    }
   });
   c.addEventListener(E.MEDIA_INFO_CHANGED, () => {
     const md = p.mediaInfo?.metadata;
@@ -307,6 +412,7 @@ loadQueue(); renderQueue();
 if (!window.isSecureContext) $('envHint').innerHTML = '<span class="warn">Cast necesita HTTPS o localhost. Abre la app desde la dirección segura.</span>';
 if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
+<script src="fase2.js"></script>
 <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 </body>
 </html>
