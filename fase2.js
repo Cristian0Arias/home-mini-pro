@@ -74,7 +74,10 @@ function srcLabel(src) {
   if (!src) return 'Sin música';
   if (src.kind === 'track') return '★ ' + src.track.title;
   if (src.kind === 'stop') return 'Detener la música';
-  return (SPECS.find(s => s[0] === src.spec) || [0, 'Sin música'])[1];
+  const known = SPECS.find(s => s[0] === src.spec);
+  if (known) return known[1];
+  if (src.spec && src.spec.startsWith('tag:')) return '🎵 ' + src.spec.slice(4);
+  return 'Sin música';
 }
 
 // ---------- Announcements ----------
@@ -89,19 +92,40 @@ async function announce(text, then = 'resume') {
   const p = state.player;
   let after = null;
   if (then === 'resume') {
-    if (p.isMediaLoaded && state.current && p.playerState !== 'IDLE') after = { track: state.current, time: p.currentTime };
+    // state.loading covers music that was just started and is still buffering
+    if (state.current && (p.playerState !== 'IDLE' || state.loading)) after = { track: state.current, time: p.currentTime || 0 };
   } else if (then) after = { track: then, time: 0 };
-  const job = { after, started: false };
-  F2.announcing = job;
+  await speakChunk({ after, chunks: splitSpeech(text), started: false, token: 0 });
+}
+// The voice service accepts ~200 characters per request, so long texts are spoken in parts.
+function splitSpeech(text, max = 190) {
+  const out = []; let cur = '';
+  const push = () => { if (cur.trim()) out.push(cur.trim()); cur = ''; };
+  for (const sentence of text.match(/[^.!?;:]+[.!?;:]*\s*/g) || [text]) {
+    if ((cur + sentence).length <= max) { cur += sentence; continue; }
+    push();
+    if (sentence.length <= max) { cur = sentence; continue; }
+    for (const word of sentence.split(/\s+/)) {
+      if ((cur + ' ' + word).length > max) push();
+      cur += (cur ? ' ' : '') + word;
+    }
+  }
+  push();
+  return out.length ? out : [text.slice(0, max)];
+}
+async function speakChunk(job) {
+  const part = job.chunks.shift();
+  job.started = false; F2.announcing = job;
+  const token = ++job.token;
   try {
-    await loadTrack({ url: ttsUrl(text), title: '📢 Anuncio', subtitle: text, type: 'audio/mpeg', announce: true });
+    await loadTrack({ url: ttsUrl(part), title: '📢 Anuncio', subtitle: part, type: 'audio/mpeg', announce: true });
   } catch (e) {
     // The voice failed to load: still play what should come next.
-    if (F2.announcing === job) finishAnnouncement();
+    if (F2.announcing === job && job.token === token) finishAnnouncement();
     return;
   }
-  // Safety net: if the speaker never reports the end of the announcement, continue anyway.
-  setTimeout(() => { if (F2.announcing === job) finishAnnouncement(); }, text.length * 110 + 6000);
+  // Safety net: if the speaker never reports the end of this part, continue anyway.
+  setTimeout(() => { if (F2.announcing === job && job.token === token) finishAnnouncement(); }, part.length * 110 + 6000);
 }
 // Called by index.html on every player state change.
 window.hmpOnState = (p) => {
@@ -116,8 +140,10 @@ window.hmpOnFinished = () => {
   return true;
 };
 function finishAnnouncement() {
-  if (!F2.announcing) return;
-  const { after } = F2.announcing; F2.announcing = null;
+  const job = F2.announcing;
+  if (!job) return;
+  if (job.chunks && job.chunks.length) { speakChunk(job); return; } // next part of a long text
+  const { after } = job; F2.announcing = null;
   if (after) {
     loadTrack(after.track).then(() => {
       if (!after.track.live && after.time > 2) setTimeout(() => { state.player.currentTime = after.time; state.controller.seek(); }, 1200);

@@ -69,6 +69,13 @@
   .banner.show { display: block; }
   .big { font-size: 28px; font-variant-numeric: tabular-nums; font-weight: 700; }
   .switch { display: flex; justify-content: space-between; align-items: center; }
+  .chat { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; padding: 4px; }
+  .msg { padding: 9px 12px; border-radius: 12px; max-width: 88%; white-space: pre-wrap; word-wrap: break-word; font-size: 14px; }
+  .msg.user { align-self: flex-end; background: var(--accent); color: #fff; }
+  .msg.bot { align-self: flex-start; background: #232835; }
+  .msg.tool { align-self: flex-start; background: transparent; color: var(--muted); font-size: 12px; padding: 0 12px; }
+  .msg.err { align-self: flex-start; background: #3a1d1d; color: #ffb3b3; }
+  #aiMic.rec { background: var(--danger); border-color: var(--danger); }
   @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -104,6 +111,28 @@
     </div>
     <div class="label">Volumen</div>
     <input type="range" id="vol" min="0" max="100" value="50" disabled>
+  </section>
+
+  <section class="card">
+    <h2>Asistente IA</h2>
+    <div class="chat" id="chatLog">
+      <div class="msg bot">Hola 👋 Pídeme lo que quieras, por ejemplo: <i>“pon algo tranquilo para estudiar”</i>, <i>“despiértame mañana a las 6 con salsa”</i> o <i>“¿cuánto es 15% de 80.000?”</i></div>
+    </div>
+    <div class="row" style="margin-top:10px">
+      <button id="aiMic" title="Hablar">🎤</button>
+      <input type="text" id="aiInput" placeholder="Escribe o toca el micrófono…">
+      <button class="primary" id="aiSend">Enviar</button>
+    </div>
+    <label class="check"><input type="checkbox" id="aiSpeak" checked> Responder en voz alta por el parlante</label>
+    <details id="aiSettings">
+      <summary>⚙️ Configurar el asistente</summary>
+      <div class="form">
+        <div class="label">Clave de API de Claude (Anthropic)</div>
+        <div class="row"><input type="password" id="aiKey" placeholder="sk-ant-…" autocomplete="off"><button id="aiKeySave">Guardar</button></div>
+        <p class="hint">Consíguela en <b>console.anthropic.com → API Keys</b>. Se guarda solo en este dispositivo y se envía únicamente a Anthropic. Te recomiendo poner un límite de gasto mensual en la consola.</p>
+        <div class="controls"><button id="aiReset">🧹 Nueva conversación</button><button id="aiKeyDel">Borrar clave</button></div>
+      </div>
+    </details>
   </section>
 
   <section class="card">
@@ -421,6 +450,7 @@ if (!window.isSecureContext) $('envHint').innerHTML = '<span class="warn">Cast n
 if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 <script src="fase2.js"></script>
+<script type="module" src="fase3.js"></script>
 <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 </body>
 </html>
