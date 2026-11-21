@@ -12,7 +12,7 @@ const KEY_STORE = 'hmp.anthropicKey';
 const SYSTEM = `Eres el asistente de voz de Home Mini Pro, una app que controla un parlante Google Home Mini en Colombia.
 El usuario te habla en español. Tus respuestas se leen en voz alta por el parlante: responde en una a tres frases cortas y naturales, sin markdown, listas, emojis ni enlaces.
 Usa las herramientas para la música, el volumen, el temporizador, las alarmas y las rutinas. Para música, las radios se buscan en el directorio Radio Browser: los géneros funcionan mejor en inglés (lofi, classical, salsa, reggaeton, rock, jazz, ambient, news).
-Para una canción, artista, álbum o playlist concretos usa abrir_bitchord: BitChord es el reproductor de música que el usuario usa para eso, y la app le muestra un botón para abrirlo con la búsqueda lista. Para ambientes o géneros generales ("algo tranquilo", "salsa") usa las radios.
+No puedes poner canciones concretas: si las piden, ofrece una radio del género o estilo parecido y recuerda que pueden decir "Ok Google, pon <canción> en YouTube Music" al parlante.
 Si el parlante no está conectado, pide al usuario que toque el ícono de Cast. Después de usar una herramienta, confirma en pocas palabras lo que hiciste.`;
 
 // ---------- Tools ----------
@@ -66,11 +66,6 @@ const TOOLS = [
     name: 'borrar_alarma',
     description: 'Borra las alarmas de una hora concreta.',
     input_schema: obj({ hora: { type: 'string', description: 'HH:MM' } }),
-  },
-  {
-    name: 'abrir_bitchord',
-    description: 'Prepara BitChord (reproductor de YouTube Music del usuario) con una búsqueda: muestra en el chat un botón que el usuario toca para abrirlo. Úsala para canciones, artistas, álbumes o playlists concretos.',
-    input_schema: obj({ busqueda: { type: 'string', description: "Lo que hay que buscar, p. ej. 'Bad Bunny Tití me preguntó' o 'Carlos Vives'." } }),
   },
   {
     name: 'ejecutar_rutina',
@@ -164,19 +159,6 @@ const runners = {
     f2save(); renderAlarms();
     return before === F2.alarms.length ? `No había alarmas a las ${t}.` : `Borré ${before - F2.alarms.length} alarma(s) de las ${t}.`;
   },
-  abrir_bitchord({ busqueda }) {
-    // Browsers only open apps/tabs from a tap, so we show a button instead of opening it directly.
-    const q = String(busqueda || '').trim();
-    const btn = document.createElement('button');
-    btn.className = 'primary';
-    btn.textContent = `🎵 Abrir BitChord${q ? ': ' + q : ''}`;
-    btn.onclick = () => openBitChord(q);
-    const wrap = document.createElement('div');
-    wrap.className = 'msg bot'; wrap.appendChild(btn);
-    AI.pendingButtons.push(wrap);
-    AI.usedBitChord = true;
-    return `Listo: mostré un botón para abrir BitChord buscando "${q}". Dile al usuario que lo toque. Para que suene en el Home Mini: en el celular, "Ok Google, conecta Bluetooth"; en el PC, Transmitir pestaña desde Chrome.`;
-  },
   async ejecutar_rutina({ nombre }) {
     if (!connected()) return NOT_CONNECTED;
     const r = findByName(F2.routines, nombre, 'name');
@@ -187,7 +169,7 @@ const runners = {
 };
 
 // ---------- Chat UI ----------
-const AI = { messages: [], busy: false, pendingButtons: [], usedBitChord: false };
+const AI = { messages: [], busy: false };
 const log = $('chatLog');
 function addMsg(kind, text) {
   const d = document.createElement('div');
@@ -212,7 +194,6 @@ const TOOL_LABELS = {
   ver_estado: '🔎 revisando el estado', reproducir_radio: '📻 buscando radio', reproducir_favorito: '★ poniendo favorito',
   controlar_reproduccion: '⏯ controlando', cambiar_volumen: '🔊 volumen', temporizador_apagado: '⏲ temporizador',
   crear_alarma: '⏰ creando alarma', borrar_alarma: '🗑 borrando alarma', ejecutar_rutina: '⚡ ejecutando rutina',
-  abrir_bitchord: '🎵 preparando BitChord',
 };
 
 async function ask(text) {
@@ -235,7 +216,6 @@ async function ask(text) {
   const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
   let reply = '';
   let ranRoutine = false;
-  AI.pendingButtons = []; AI.usedBitChord = false;
   try {
     for (let i = 0; i < 8; i++) {
       const response = await client.beta.messages.create({
@@ -284,10 +264,8 @@ async function ask(text) {
   thinking.remove();
   if (!reply) reply = 'Listo.';
   addMsg('bot', reply);
-  for (const b of AI.pendingButtons) { log.appendChild(b); log.scrollTop = log.scrollHeight; }
   // Speak the reply on the speaker (a routine already speaks its own announcement).
-  // When handing over to BitChord, don't restart our own music after speaking.
-  if ($('aiSpeak').checked && connected() && !ranRoutine) announce(reply, AI.usedBitChord ? null : 'resume');
+  if ($('aiSpeak').checked && connected() && !ranRoutine) announce(reply, 'resume');
   AI.busy = false; $('aiSend').disabled = false;
 }
 
