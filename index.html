@@ -136,6 +136,40 @@
   </section>
 
   <section class="card">
+    <h2>BitChord</h2>
+    <div class="row">
+      <input type="search" id="bcQuery" placeholder="Canción, artista, álbum o playlist">
+      <button class="primary" id="bcOpen">🎵 Abrir</button>
+    </div>
+    <div class="controls">
+      <button id="bcHome">Ir al inicio de BitChord</button>
+      <a href="https://github.com/kushagrasinghx/BitChord/releases" target="_blank" rel="noopener"><button type="button">⬇ App para Android</button></a>
+    </div>
+    <label class="check"><input type="checkbox" id="bcPause" checked> Pausar la música de Home Mini Pro al abrir BitChord</label>
+    <details>
+      <summary>¿Cómo hago que BitChord suene en el Home Mini?</summary>
+      <div id="bcHowAndroid">
+        <p><b>Desde el celular (Bluetooth):</b></p>
+        <ol>
+          <li>La primera vez: di <i>“Ok Google, activa el emparejamiento Bluetooth”</i> y en el celular ve a Ajustes → Bluetooth → elige tu Home Mini.</li>
+          <li>Las siguientes veces basta con <i>“Ok Google, conecta Bluetooth”</i>.</li>
+          <li>Abre BitChord desde aquí y dale play: el sonido sale por el parlante.</li>
+        </ol>
+      </div>
+      <div id="bcHowPc">
+        <p><b>Desde el PC (Chrome o Edge):</b></p>
+        <ol>
+          <li>Abre BitChord desde aquí; se abre en otra pestaña.</li>
+          <li>En esa pestaña: menú <b>⋮ → Transmitir…</b> → <b>Fuentes</b> → <b>Transmitir pestaña</b> → elige tu Home Mini.</li>
+          <li>Dale play en BitChord. También puedes conectar el PC al parlante por Bluetooth.</li>
+        </ol>
+      </div>
+      <p class="hint">Cuando quieras volver a Home Mini Pro, pon cualquier radio, favorito o rutina aquí y el parlante vuelve a esta app.</p>
+    </details>
+    <p class="hint">BitChord es un proyecto independiente de código abierto: la música la reproduce BitChord, no esta app.</p>
+  </section>
+
+  <section class="card">
     <h2>Rutinas</h2>
     <div class="routines" id="routineGrid"></div>
     <details>
@@ -450,6 +484,7 @@ if (!window.isSecureContext) $('envHint').innerHTML = '<span class="warn">Cast n
 if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
 <script src="fase2.js"></script>
+<script src="bitchord.js"></script>
 <script type="module" src="fase3.js"></script>
 <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
 </body>
