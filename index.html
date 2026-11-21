@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f1115">
+<link rel="manifest" href="manifest.webmanifest">
+<title>Home Mini Pro</title>
+<style>
+  :root {
+    --bg: #0f1115; --card: #181b22; --line: #2a2f3a; --text: #e8eaf0; --muted: #9aa1b2;
+    --accent: #4f8cff; --accent-2: #2dd4a7; --danger: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--bg); z-index: 5; }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  google-cast-launcher { width: 30px; height: 30px; display: inline-block; cursor: pointer; --connected-color: var(--accent-2); --disconnected-color: var(--text); }
+  main { max-width: 760px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .card h2 { margin: 0 0 12px; font-size: 15px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; }
+  .status { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--danger); flex: none; }
+  .dot.on { background: var(--accent-2); }
+  .now { display: flex; gap: 14px; align-items: center; margin-top: 12px; }
+  .art { width: 64px; height: 64px; border-radius: 10px; background: #252a35 center/cover; flex: none; }
+  .now .t { font-weight: 600; }
+  .now .s { color: var(--muted); font-size: 13px; }
+  .controls { display: flex; gap: 8px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+  button { background: #252a35; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 9px 14px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  input[type=text], input[type=url], input[type=search] { width: 100%; background: #10131a; color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font: inherit; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .row { display: flex; gap: 8px; }
+  .row > input { flex: 1; min-width: 0; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .label { font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  ul.list { list-style: none; padding: 0; margin: 8px 0 0; max-height: 360px; overflow: auto; }
+  ul.list li { display: flex; align-items: center; gap: 10px; padding: 9px 6px; border-bottom: 1px solid var(--line); }
+  ul.list li img { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; background: #252a35; flex: none; }
+  ul.list li .meta { flex: 1; min-width: 0; }
+  ul.list li .meta div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  ul.list li .meta small { color: var(--muted); }
+  ul.list li button { padding: 6px 10px; font-size: 13px; }
+  .hint { color: var(--muted); font-size: 13px; margin: 8px 0 0; }
+  .warn { color: #ffcf6b; }
+  .time { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  @media (max-width: 520px) { .grid2 { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Home Mini <span>Pro</span></h1>
+  <google-cast-launcher title="Conectar al parlante"></google-cast-launcher>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Parlante</h2>
+    <div class="status"><span class="dot" id="dot"></span><span id="statusText">Cargando Google Cast…</span></div>
+    <div class="now">
+      <div class="art" id="art"></div>
+      <div>
+        <div class="t" id="nowTitle">Nada sonando</div>
+        <div class="s" id="nowSub">Conéctate con el ícono de Cast de arriba</div>
+      </div>
+    </div>
+    <div style="margin-top:12px">
+      <input type="range" id="seek" min="0" max="0" value="0" step="1" disabled>
+      <div class="time"><span id="tCur">0:00</span><span id="tDur">0:00</span></div>
+    </div>
+    <div class="controls">
+      <button id="btnPrev" disabled>⏮</button>
+      <button id="btnPlay" class="primary" disabled>▶︎ / ❚❚</button>
+      <button id="btnNext" disabled>⏭</button>
+      <button id="btnStop" disabled>⏹</button>
+      <button id="btnMute" disabled>🔇</button>
+    </div>
+    <div class="label">Volumen</div>
+    <input type="range" id="vol" min="0" max="100" value="50" disabled>
+  </section>
+
+  <section class="card">
+    <h2>Radios en vivo</h2>
+    <div class="row">
+      <input type="search" id="radioQuery" placeholder="Buscar emisora (ej. Tropicana, jazz, lofi)">
+      <button id="btnRadio">Buscar</button>
+    </div>
+    <div class="grid2" style="margin-top:8px">
+      <button data-quick="CO">Top Colombia</button>
+      <button data-quick="tag:lofi">Lofi</button>
+    </div>
+    <ul class="list" id="radioList"></ul>
+    <p class="hint">Fuente: Radio Browser, un directorio abierto de emisoras.</p>
+  </section>
+
+  <section class="card">
+    <h2>Enviar un enlace de audio</h2>
+    <div class="label">URL directa (mp3, m4a, aac, ogg, flac o stream)</div>
+    <input type="url" id="urlInput" placeholder="https://…/cancion.mp3">
+    <div class="label">Título (opcional)</div>
+    <input type="text" id="urlTitle" placeholder="Mi canción">
+    <div class="controls">
+      <button class="primary" id="btnUrlPlay">Reproducir ahora</button>
+      <button id="btnUrlQueue">Añadir a la cola</button>
+    </div>
+    <p class="hint">El parlante descarga el audio por su cuenta, así que el enlace debe ser público y preferiblemente HTTPS.</p>
+  </section>
+
+  <section class="card">
+    <h2>Cola</h2>
+    <ul class="list" id="queueList"></ul>
+    <div class="controls"><button id="btnClear">Vaciar cola</button></div>
+  </section>
+
+  <p class="hint" id="envHint"></p>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { queue: [], index: -1, player: null, controller: null, ready: false };
+
+// ---------- Persistent queue ----------
+function saveQueue() { try { localStorage.setItem('hmp.queue', JSON.stringify({ q: state.queue, i: state.index })); } catch (e) {} }
+function loadQueue() { try { const d = JSON.parse(localStorage.getItem('hmp.queue') || 'null'); if (d) { state.queue = d.q || []; state.index = d.i ?? -1; } } catch (e) {} }
+
+// ---------- Helpers ----------
+const fmt = (s) => { s = Math.max(0, Math.floor(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+function guessType(url, fallback) {
+  const u = url.toLowerCase().split('?')[0];
+  if (u.endsWith('.mp3')) return 'audio/mpeg';
+  if (u.endsWith('.m4a') || u.endsWith('.mp4')) return 'audio/mp4';
+  if (u.endsWith('.aac')) return 'audio/aac';
+  if (u.endsWith('.ogg') || u.endsWith('.opus')) return 'audio/ogg';
+  if (u.endsWith('.flac')) return 'audio/flac';
+  if (u.endsWith('.wav')) return 'audio/wav';
+  if (u.endsWith('.m3u8')) return 'application/x-mpegURL';
+  return fallback || 'audio/mpeg';
+}
+function session() { return window.cast && cast.framework ? cast.framework.CastContext.getInstance().getCurrentSession() : null; }
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+// ---------- Cast ----------
+function loadTrack(track) {
+  const s = session();
+  if (!s) { alert('Primero conéctate al parlante con el ícono de Cast.'); return; }
+  const info = new chrome.cast.media.MediaInfo(track.url, track.type || guessType(track.url));
+  info.streamType = track.live ? chrome.cast.media.StreamType.LIVE : chrome.cast.media.StreamType.BUFFERED;
+  const md = new chrome.cast.media.MusicTrackMediaMetadata();
+  md.title = track.title || 'Audio';
+  md.artist = track.subtitle || 'Home Mini Pro';
+  if (track.image) md.images = [new chrome.cast.Image(track.image)];
+  info.metadata = md;
+  const req = new chrome.cast.media.LoadRequest(info);
+  req.autoplay = true;
+  s.loadMedia(req).then(
+    () => renderNow(track),
+    (err) => { console.error(err); alert('El parlante no pudo reproducir este audio. Prueba con otro enlace (debe ser público y en un formato compatible).'); }
+  );
+}
+function playIndex(i) {
+  if (i < 0 || i >= state.queue.length) return;
+  state.index = i; saveQueue(); renderQueue();
+  loadTrack(state.queue[i]);
+}
+function next() { if (state.index + 1 < state.queue.length) playIndex(state.index + 1); }
+function prev() { if (state.index > 0) playIndex(state.index - 1); }
+
+function playNow(track) {
+  state.queue.splice(state.index + 1, 0, track);
+  playIndex(state.index + 1);
+}
+function enqueue(track) {
+  state.queue.push(track); saveQueue(); renderQueue();
+  if (state.index === -1 || !state.player?.isMediaLoaded) playIndex(state.queue.length - 1);
+}
+
+function initCast() {
+  const ctx = cast.framework.CastContext.getInstance();
+  ctx.setOptions({
+    receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+    autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
+  });
+  state.player = new cast.framework.RemotePlayer();
+  state.controller = new cast.framework.RemotePlayerController(state.player);
+  const E = cast.framework.RemotePlayerEventType;
+  const c = state.controller, p = state.player;
+
+  c.addEventListener(E.IS_CONNECTED_CHANGED, renderConnection);
+  c.addEventListener(E.VOLUME_LEVEL_CHANGED, () => { $('vol').value = Math.round(p.volumeLevel * 100); });
+  c.addEventListener(E.IS_MUTED_CHANGED, () => { $('btnMute').textContent = p.isMuted ? '🔈' : '🔇'; });
+  c.addEventListener(E.CURRENT_TIME_CHANGED, () => { if (!seeking) { $('seek').value = p.currentTime; $('tCur').textContent = fmt(p.currentTime); } });
+  c.addEventListener(E.DURATION_CHANGED, () => { $('seek').max = p.duration || 0; $('tDur').textContent = p.duration ? fmt(p.duration) : 'EN VIVO'; $('seek').disabled = !p.duration; });
+  c.addEventListener(E.PLAYER_STATE_CHANGED, () => {
+    // Auto-advance when a track finishes
+    const ms = session()?.getMediaSession();
+    if (p.playerState === 'IDLE' && ms && ms.idleReason === 'FINISHED') next();
+  });
+  c.addEventListener(E.MEDIA_INFO_CHANGED, () => {
+    const md = p.mediaInfo?.metadata;
+    if (md) renderNow({ title: md.title, subtitle: md.artist, image: md.images?.[0]?.url });
+  });
+  state.ready = true;
+  renderConnection();
+}
+window['__onGCastApiAvailable'] = (ok) => {
+  if (ok) initCast();
+  else {
+    $('statusText').textContent = 'Google Cast no está disponible en este navegador.';
+    $('envHint').innerHTML = '<span class="warn">Abre esta app en Google Chrome (PC o Android) o Microsoft Edge. Safari en iPhone no es compatible con Cast web.</span>';
+  }
+};
+
+// ---------- UI rendering ----------
+function renderConnection() {
+  const on = !!state.player?.isConnected;
+  $('dot').classList.toggle('on', on);
+  const name = session()?.getCastDevice()?.friendlyName;
+  $('statusText').textContent = on ? `Conectado a “${name || 'parlante'}”` : 'Sin conexión. Toca el ícono de Cast y elige tu Home Mini.';
+  ['btnPrev', 'btnPlay', 'btnNext', 'btnStop', 'btnMute', 'vol'].forEach(id => $(id).disabled = !on);
+}
+function renderNow(t) {
+  $('nowTitle').textContent = t.title || 'Audio';
+  $('nowSub').textContent = t.subtitle || '';
+  $('art').style.backgroundImage = t.image ? `url("${t.image.replace(/"/g, '%22')}")` : '';
+}
+function renderQueue() {
+  const ul = $('queueList');
+  if (!state.queue.length) { ul.innerHTML = '<li><small class="hint">La cola está vacía.</small></li>'; return; }
+  ul.innerHTML = state.queue.map((t, i) => `
+    <li style="${i === state.index ? 'background:#1f2633;border-radius:8px' : ''}">
+      <img src="${esc(t.image || '')}" alt="" onerror="this.style.visibility='hidden'">
+      <div class="meta"><div>${i === state.index ? '▶︎ ' : ''}${esc(t.title)}</div><small>${esc(t.subtitle || '')}</small></div>
+      <button data-play="${i}">▶︎</button><button data-del="${i}">✕</button>
+    </li>`).join('');
+}
+$('queueList').addEventListener('click', (e) => {
+  const p = e.target.dataset.play, d = e.target.dataset.del;
+  if (p !== undefined) playIndex(+p);
+  if (d !== undefined) {
+    const i = +d; state.queue.splice(i, 1);
+    if (i < state.index) state.index--; else if (i === state.index) state.index = -1;
+    saveQueue(); renderQueue();
+  }
+});
+
+// ---------- Controls ----------
+let seeking = false;
+$('btnPlay').onclick = () => state.controller.playOrPause();
+$('btnStop').onclick = () => state.controller.stop();
+$('btnNext').onclick = next;
+$('btnPrev').onclick = prev;
+$('btnMute').onclick = () => state.controller.muteOrUnmute();
+$('vol').oninput = (e) => { state.player.volumeLevel = e.target.value / 100; state.controller.setVolumeLevel(); };
+$('seek').oninput = (e) => { seeking = true; $('tCur').textContent = fmt(e.target.value); };
+$('seek').onchange = (e) => { state.player.currentTime = +e.target.value; state.controller.seek(); seeking = false; };
+$('btnClear').onclick = () => { state.queue = []; state.index = -1; saveQueue(); renderQueue(); };
+
+function urlTrack() {
+  const url = $('urlInput').value.trim();
+  if (!/^https?:\/\//i.test(url)) { alert('Pega un enlace que empiece por http:// o https://'); return null; }
+  return { url, title: $('urlTitle').value.trim() || decodeURIComponent(url.split('/').pop().split('?')[0]) || 'Audio', subtitle: 'Enlace directo', type: guessType(url) };
+}
+$('btnUrlPlay').onclick = () => { const t = urlTrack(); if (t) playNow(t); };
+$('btnUrlQueue').onclick = () => { const t = urlTrack(); if (t) enqueue(t); };
+
+// ---------- Radio Browser ----------
+const RB = 'https://de1.api.radio-browser.info/json/stations/search';
+async function searchRadio(params) {
+  const ul = $('radioList');
+  ul.innerHTML = '<li><small class="hint">Buscando…</small></li>';
+  const qs = new URLSearchParams({ hidebroken: 'true', order: 'clickcount', reverse: 'true', limit: '40', ...params });
+  try {
+    const res = await fetch(`${RB}?${qs}`);
+    const list = (await res.json()).filter(s => s.url_resolved && s.url_resolved.startsWith('https://'));
+    if (!list.length) { ul.innerHTML = '<li><small class="hint">No encontré emisoras compatibles (solo se muestran las que transmiten por HTTPS).</small></li>'; return; }
+    window._radios = list;
+    ul.innerHTML = list.map((s, i) => `
+      <li>
+        <img src="${esc(s.favicon)}" alt="" onerror="this.style.visibility='hidden'">
+        <div class="meta"><div>${esc(s.name.trim())}</div><small>${esc([s.country, s.tags?.split(',').slice(0, 3).join(', '), s.bitrate ? s.bitrate + ' kbps' : ''].filter(Boolean).join(' · '))}</small></div>
+        <button data-radio="${i}">▶︎ Escuchar</button>
+      </li>`).join('');
+  } catch (e) {
+    ul.innerHTML = '<li><small class="hint warn">No pude conectar con el directorio de radios. Revisa tu conexión.</small></li>';
+  }
+}
+$('radioList').addEventListener('click', (e) => {
+  const i = e.target.dataset.radio; if (i === undefined) return;
+  const s = window._radios[+i];
+  const codec = (s.codec || '').toUpperCase();
+  const type = codec === 'AAC' || codec === 'AAC+' ? 'audio/aac' : codec === 'OGG' ? 'audio/ogg' : guessType(s.url_resolved, 'audio/mpeg');
+  playNow({ url: s.url_resolved, title: s.name.trim(), subtitle: 'Radio en vivo · ' + (s.country || ''), image: s.favicon, type, live: true });
+});
+$('btnRadio').onclick = () => { const q = $('radioQuery').value.trim(); if (q) searchRadio({ name: q }); };
+$('radioQuery').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('btnRadio').click(); });
+document.querySelectorAll('[data-quick]').forEach(b => b.onclick = () => {
+  const v = b.dataset.quick;
+  searchRadio(v.startsWith('tag:') ? { tag: v.slice(4) } : { countrycode: v });
+});
+
+// ---------- Boot ----------
+loadQueue(); renderQueue();
+if (!window.isSecureContext) $('envHint').innerHTML = '<span class="warn">Cast necesita HTTPS o localhost. Abre la app desde la dirección segura.</span>';
+if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+<script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+</body>
+</html>
