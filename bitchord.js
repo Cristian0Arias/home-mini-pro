@@ -4,7 +4,8 @@
 //   falling back to the web player if the app isn't installed.
 // - Anywhere else: opens the BitChord web player's search page (/search?q=…).
 
-const BC_WEB = 'https://bitchord.kushagrasingh.in';
+// The web player (Cloudflare Pages deploy listed in BitChord's web/README.md). bitchord.kushagrasingh.in is only the landing page.
+const BC_WEB = 'https://bitchord-8bw.pages.dev';
 const BC_PACKAGE = 'com.music.bitchord';
 const IS_ANDROID = /Android/i.test(navigator.userAgent);
 
