@@ -258,9 +258,11 @@ function loadTrack(track) {
   info.metadata = md;
   const req = new chrome.cast.media.LoadRequest(info);
   req.autoplay = true;
+  state.loading = true;
+  const done = () => { clearTimeout(state.loadingT); state.loadingT = setTimeout(() => { state.loading = false; }, 1500); };
   return s.loadMedia(req).then(
-    () => { if (!track.announce) state.current = track; renderNow(track); },
-    (err) => { console.error(err); alert('El parlante no pudo reproducir este audio. Prueba con otro enlace (debe ser público y en un formato compatible).'); }
+    () => { done(); if (!track.announce) state.current = track; renderNow(track); },
+    (err) => { done(); console.error(err); alert('El parlante no pudo reproducir este audio. Prueba con otro enlace (debe ser público y en un formato compatible).'); throw err; }
   );
 }
 function playIndex(i) {
@@ -296,13 +298,19 @@ function initCast() {
   c.addEventListener(E.IS_MUTED_CHANGED, () => { $('btnMute').textContent = p.isMuted ? '🔈' : '🔇'; });
   c.addEventListener(E.CURRENT_TIME_CHANGED, () => { if (!seeking) { $('seek').value = p.currentTime; $('tCur').textContent = fmt(p.currentTime); } });
   c.addEventListener(E.DURATION_CHANGED, () => { $('seek').max = p.duration || 0; $('tDur').textContent = p.duration ? fmt(p.duration) : 'EN VIVO'; $('seek').disabled = !p.duration; });
+  let lastState = null;
   c.addEventListener(E.PLAYER_STATE_CHANGED, () => {
-    // Auto-advance when a track finishes
+    const was = lastState; lastState = p.playerState;
+    if (window.hmpOnState) window.hmpOnState(p);
+    // A track ended: the speaker went from playing to IDLE. The Home Mini often drops the
+    // media session at that point, so idleReason can't be relied on; use the transition instead.
+    if (p.playerState !== 'IDLE' || !was || was === 'IDLE') return;
+    if (state.loading) return;                                  // we are switching tracks ourselves
+    if (state.userStopped) { state.userStopped = false; return; } // stop pressed / timer
     const ms = session()?.getMediaSession();
-    if (p.playerState === 'IDLE' && ms && ms.idleReason === 'FINISHED') {
-      if (window.hmpOnFinished && window.hmpOnFinished()) return; // announcement ended
-      next();
-    }
+    if (ms && ms.idleReason && ms.idleReason !== 'FINISHED') return; // cancelled, interrupted or error
+    if (window.hmpOnFinished && window.hmpOnFinished()) return;      // announcement ended
+    next();
   });
   c.addEventListener(E.MEDIA_INFO_CHANGED, () => {
     const md = p.mediaInfo?.metadata;
@@ -355,7 +363,7 @@ $('queueList').addEventListener('click', (e) => {
 // ---------- Controls ----------
 let seeking = false;
 $('btnPlay').onclick = () => state.controller.playOrPause();
-$('btnStop').onclick = () => state.controller.stop();
+$('btnStop').onclick = () => { state.userStopped = true; state.controller.stop(); };
 $('btnNext').onclick = next;
 $('btnPrev').onclick = prev;
 $('btnMute').onclick = () => state.controller.muteOrUnmute();

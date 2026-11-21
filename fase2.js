@@ -91,19 +91,40 @@ async function announce(text, then = 'resume') {
   if (then === 'resume') {
     if (p.isMediaLoaded && state.current && p.playerState !== 'IDLE') after = { track: state.current, time: p.currentTime };
   } else if (then) after = { track: then, time: 0 };
-  F2.announcing = { after };
-  await loadTrack({ url: ttsUrl(text), title: '📢 Anuncio', subtitle: text, type: 'audio/mpeg', announce: true });
+  const job = { after, started: false };
+  F2.announcing = job;
+  try {
+    await loadTrack({ url: ttsUrl(text), title: '📢 Anuncio', subtitle: text, type: 'audio/mpeg', announce: true });
+  } catch (e) {
+    // The voice failed to load: still play what should come next.
+    if (F2.announcing === job) finishAnnouncement();
+    return;
+  }
+  // Safety net: if the speaker never reports the end of the announcement, continue anyway.
+  setTimeout(() => { if (F2.announcing === job) finishAnnouncement(); }, text.length * 110 + 6000);
 }
+// Called by index.html on every player state change.
+window.hmpOnState = (p) => {
+  const a = F2.announcing;
+  if (a && !a.started && p.playerState === 'PLAYING' && String(p.mediaInfo?.contentId || '').includes('translate_tts')) a.started = true;
+};
+// Called by index.html when a track ends. Only counts once the announcement actually played.
 window.hmpOnFinished = () => {
   if (!F2.announcing) return false;
+  if (!F2.announcing.started) return true; // an older track was interrupted by the announcement
+  finishAnnouncement();
+  return true;
+};
+function finishAnnouncement() {
+  if (!F2.announcing) return;
   const { after } = F2.announcing; F2.announcing = null;
   if (after) {
     loadTrack(after.track).then(() => {
       if (!after.track.live && after.time > 2) setTimeout(() => { state.player.currentTime = after.time; state.controller.seek(); }, 1200);
     }).catch(() => {});
   } else renderNowIdle();
-  return true;
-};
+}
+function stopMusic() { F2.announcing = null; state.userStopped = true; state.controller.stop(); }
 function renderNowIdle() { $('nowTitle').textContent = 'Nada sonando'; $('nowSub').textContent = 'Listo para el siguiente anuncio o canción'; $('art').style.backgroundImage = ''; }
 
 $('btnSay').onclick = () => { announce($('sayText').value, $('sayResume').checked ? 'resume' : null); };
@@ -136,7 +157,7 @@ function tickSleep() {
   if (left <= 0) {
     const restore = s.fadeFrom;
     F2.sleep = null; $('sleepLeft').textContent = '--:--'; $('sleepCancel').disabled = true;
-    if (connected()) { state.controller.stop(); if (restore != null) setTimeout(() => setVol(restore), 1500); }
+    if (connected()) { stopMusic(); if (restore != null) setTimeout(() => setVol(restore), 1500); }
     banner('😴 Temporizador terminado: música detenida.', 5000);
   }
 }
@@ -159,7 +180,7 @@ async function runRoutine(r) {
     const src = await resolveSource(r.src);
     if (r.vol != null) setVol(r.vol);
     if (src === 'stop') {
-      F2.announcing = null; state.controller.stop();
+      stopMusic();
       if (r.say) setTimeout(() => announce(r.say, null), 800);
     } else if (r.say) await announce(r.say, src || 'resume');
     else if (src) await loadTrack(src);
